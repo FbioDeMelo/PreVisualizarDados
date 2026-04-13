@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Filtrar Planilha</title>
+  <link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+      integrity="sha512-dymjVkaWqaaTXC1kRGrXkYg9Ko1HzZ3z3lEl2mC1L+nLgM6qGCKWJ2f17A8ZYm1XbMdVtTPhbMZz5h+7zR5Yiw=="
+      crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  
+  <!-- Importando o CSS que criamos antes -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Pré-visualizar Dados</h1>
+  </header>
+
+  {% if erro %}
+  <div style="background-color:#fee2e2; color:#b91c1c; padding: 1rem; border-radius:8px; margin: 1rem 1.5rem; text-align:center;">
+    <strong>Erro:</strong> {{ erro }}
+  </div>
+  {% endif %}
+
+  {% if colunas %}
+  <div style="display:flex; justify-content:flex-end; margin: 0.75rem 1.5rem 0;">
+    <a href="/"><button type="button" class="btn btn-secondary">⬅️ Voltar para Upload</button></a>
+  </div>
+  {% endif %}
+
+  {% if not colunas %}
+  <section class="upload-container">
+    <form class="upload-form" method="POST" enctype="multipart/form-data">
+      <div class="file-input-container">
+        <label class="file-input-label" id="fileInputLabel">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <h3>Arraste e solte o arquivo</h3>
+          <p>ou <span class="browse-text">procure no seu dispositivo</span></p>
+          <span class="file-types">Suporte: XLSX, XLS, CSV</span>
+          <input type="file" name="file" accept=".xlsx,.xls,.csv" required id="fileInput">
+        </label>
+        <div class="file-name" id="fileName">Nenhum arquivo selecionado</div>
+      </div>
+      <button type="submit" class="btn"><i class="fas fa-upload"></i> Enviar</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if colunas %}
+  <main class="main-container">
+    <aside class="sidebar">
+      <h2>Filtros</h2>
+      <form method="POST" action="/filtrar">
+        <input type="text" name="busca" placeholder="Pesquisar em todas as colunas..." list="sugestoes">
+        <datalist id="sugestoes">
+          {% for valor in sugestoes %}
+            <option value="{{ valor }}">
+          {% endfor %}
+        </datalist>
+        <br>
+        {% for col in colunas %}
+        <label>
+          <input type="checkbox" name="colunas" value="{{ col }}"
+            {% if colunas_escolhidas and col in colunas_escolhidas %}checked{% endif %}>
+          {{ col }}
+        </label>
+        {% endfor %}
+        <br>
+        <select name="coluna_duplicados">
+          <option value="">Escolha a coluna p/ remover duplos</option>
+          {% for col in colunas %}
+            <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+        <br>
+        <label>
+          <input type="checkbox" name="remover_duplicados" value="1"> Remover linhas duplicadas
+        </label>
+        <br>
+        <button type="submit" class="btn">Aplicar Filtros</button>
+      </form>
+    </aside>
+
+    <section class="content">
+      <h2>Prévia dos Dados</h2>
+      {% if dados %}
+      <div class="table-container">
+        <!-- Adicionado um ID 'previewTable'. Ele será transformado em Grid dinâmico via js -->
+        <table id="previewTable" class="display" style="width:100%">
+          <thead>
+            <tr>
+              {% for col in colunas_escolhidas %}
+                <th>{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in dados %}
+            <tr>
+              {% for cell in row %}
+                <td>{{ cell }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <br>
+      <a href="/baixar"><button class="btn"><i class="fas fa-download"></i> Baixar Excel Filtrado</button></a>
+      {% else %}
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <p>Nenhum dado ainda. Aplique os filtros.</p>
+        </div>
+      {% endif %}
+    </section>
+  </main>
+  {% endif %}
+
+  <!-- jQuery e DataTables -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  
+  <!-- Nosso arquivo Main -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
