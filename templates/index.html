@@ -8,10 +8,14 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
       integrity="sha512-dymjVkaWqaaTXC1kRGrXkYg9Ko1HzZ3z3lEl2mC1L+nLgM6qGCKWJ2f17A8ZYm1XbMdVtTPhbMZz5h+7zR5Yiw=="
       crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- DataTables CSS -->
+  <!-- DataTables CSS e Extensões -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
   
   <!-- Importando o CSS que criamos antes -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -22,16 +26,12 @@
   </header>
 
   {% if erro %}
-  <div style="background-color:#fee2e2; color:#b91c1c; padding: 1rem; border-radius:8px; margin: 1rem 1.5rem; text-align:center;">
+  <div style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 1rem; border-radius: 12px; margin: 1rem 3rem; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1); backdrop-filter: blur(10px);">
     <strong>Erro:</strong> {{ erro }}
   </div>
   {% endif %}
 
-  {% if colunas %}
-  <div style="display:flex; justify-content:flex-end; margin: 0.75rem 1.5rem 0;">
-    <a href="/"><button type="button" class="btn btn-secondary">⬅️ Voltar para Upload</button></a>
-  </div>
-  {% endif %}
+
 
   {% if not colunas %}
   <section class="upload-container">
@@ -54,8 +54,13 @@
   {% if colunas %}
   <main class="main-container">
     <aside class="sidebar">
+      <a href="/" style="text-decoration: none;">
+        <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 1.5rem;">
+          <i class="fas fa-arrow-left"></i> Trocar Arquivo
+        </button>
+      </a>
       <h2>Filtros</h2>
-      <form method="POST" action="/filtrar">
+      <form method="POST" action="/filtrar" id="filterForm">
         <input type="text" name="busca" placeholder="Pesquisar em todas as colunas..." list="sugestoes">
         <datalist id="sugestoes">
           {% for valor in sugestoes %}
@@ -71,6 +76,19 @@
         </label>
         {% endfor %}
         <br>
+    <select name="coluna_limpar">
+          <option value="">Coluna p/ remover ( ) -</option>
+          <option value="TODAS">Todas (CUIDADO com espaços)</option>
+          {% for col in colunas %}
+            <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+        <br>
+        <label>
+          <input type="checkbox" name="remover_caracteres" value="1"> Limpar pontuação ( ) - e espaços
+        </label>
+        <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #e2e8f0;">
+
         <select name="coluna_duplicados">
           <option value="">Escolha a coluna p/ remover duplos</option>
           {% for col in colunas %}
@@ -81,8 +99,7 @@
         <label>
           <input type="checkbox" name="remover_duplicados" value="1"> Remover linhas duplicadas
         </label>
-        <br>
-        <button type="submit" class="btn">Aplicar Filtros</button>
+        <!-- Botão submit removido para funcionalidade de carregamento automático (Dynamic Filtering) -->
       </form>
     </aside>
 
@@ -94,15 +111,17 @@
         <table id="previewTable" class="display" style="width:100%">
           <thead>
             <tr>
+              <th style="display:none">_Index_</th>
               {% for col in colunas_escolhidas %}
-                <th>{{ col }}</th>
+                <th data-col-name="{{ col }}">{{ col }}</th>
               {% endfor %}
             </tr>
           </thead>
           <tbody>
             {% for row in dados %}
-            <tr>
-              {% for cell in row %}
+            <tr data-row-id="{{ row[0] }}">
+              <td style="display:none">{{ row[0] }}</td>
+              {% for cell in row[1:] %}
                 <td>{{ cell }}</td>
               {% endfor %}
             </tr>
@@ -111,7 +130,12 @@
         </table>
       </div>
       <br>
-      <a href="/baixar"><button class="btn"><i class="fas fa-download"></i> Baixar Excel Filtrado</button></a>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <form id="downloadForm" action="/baixar" method="POST">
+            <input type="hidden" name="col_order" id="colOrderInput">
+            <button type="submit" class="btn"><i class="fas fa-download"></i> Baixar Excel Filtrado</button>
+        </form>
+      </div>
       {% else %}
         <div class="empty-state">
           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -126,9 +150,11 @@
   </main>
   {% endif %}
 
-  <!-- jQuery e DataTables -->
+  <!-- jQuery e DataTables c/ Extensões -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
+  <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
   
   <!-- Nosso arquivo Main -->
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
