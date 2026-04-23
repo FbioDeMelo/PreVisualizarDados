@@ -10,7 +10,7 @@ from io import BytesIO
 import zipfile
 
 app = Flask(__name__)
-app.secret_key = 'super_secret_key_teste_csv'
+app.secret_key = ''
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
