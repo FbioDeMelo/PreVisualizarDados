@@ -1,6 +1,6 @@
 # 📊 Pré-visualizador e Filtrador de Dados
 
-![Screenshot do Projeto](assets/screenshot.png)
+![Screenshot do Projeto](assets/capturar.png)
 
 Uma ferramenta web moderna e eficiente para manipulação, visualização e exportação de planilhas. Desenvolvida com **Python (Flask)** e **Pandas**, oferece uma interface intuitiva para processar grandes volumes de dados diretamente no navegador.
 
