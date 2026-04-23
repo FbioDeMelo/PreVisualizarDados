@@ -1,0 +1,4 @@
+# Configuração do Pyrefly para usar o Python correto
+# que tem Flask, pandas, numpy etc. instalados.
+[python]
+interpreter = "C:/Users/Fabio/AppData/Local/Programs/Python/Python314/python.exe"
