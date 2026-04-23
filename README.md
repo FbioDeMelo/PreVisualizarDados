@@ -58,7 +58,7 @@ Uma ferramenta web moderna e eficiente para manipulação, visualização e expo
 
 1. **Clone o repositório:**
    ```bash
-   git clone https://github.com/seu-usuario/PreVisualizarDados-main.git
+   git clone https://github.com/seu-usuario/PreVisualizarDados.git
    cd PreVisualizarDados-main
    ```
 
