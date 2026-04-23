@@ -10,41 +10,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- DataTables CSS e Extensões -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.dataTables.min.css">
   <link rel="stylesheet" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css">
-
-  <!-- CSS principal -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
 
   <!-- Loading Overlay -->
-  <div id="global-loading"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-    <div class="spinner"
-      style="width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;">
-    </div>
-    <h2 id="loading-msg" style="color: #fff; margin-top: 1rem; font-weight: 500;">Processando dados, aguarde...</h2>
-    <!-- Barra de progresso de upload -->
-    <div id="upload-progress-wrap" style="display:none; width: 320px; margin-top: 1.2rem;">
-      <div style="background: rgba(255,255,255,0.15); border-radius: 999px; height: 10px; overflow:hidden;">
-        <div id="upload-progress-bar"
-          style="height:100%; width:0%; background: linear-gradient(90deg,#3b82f6,#8b5cf6); border-radius: 999px; transition: width 0.2s ease;">
-        </div>
+  <div id="global-loading" class="loading-overlay">
+    <div class="spinner-ring"></div>
+    <p id="loading-msg" class="loading-msg">Processando dados, aguarde...</p>
+    <div id="upload-progress-wrap" class="progress-wrap">
+      <div class="progress-track">
+        <div id="upload-progress-bar" class="progress-bar"></div>
       </div>
-      <p id="upload-progress-pct" style="color:#cbd5e1; font-size:0.85rem; text-align:center; margin-top:0.5rem;">0%</p>
+      <p id="upload-progress-pct" class="progress-pct">0%</p>
     </div>
-    <style>
-      @keyframes spin {
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-    </style>
   </div>
 
   <header>
@@ -52,9 +35,9 @@
   </header>
 
   {% if erro %}
-  <div
-    style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 1rem; border-radius: 12px; margin: 1rem 3rem; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1); backdrop-filter: blur(10px);">
-    <strong>Erro:</strong> {{ erro }}
+  <div class="alert-error">
+    <i class="fas fa-exclamation-circle"></i>
+    <span><strong>Erro:</strong> {{ erro }}</span>
   </div>
   {% endif %}
 
@@ -67,7 +50,7 @@
           <i class="fas fa-cloud-upload-alt"></i>
           <h3>Arraste e solte o arquivo</h3>
           <p>ou <span class="browse-text">procure no seu dispositivo</span></p>
-          <span class="file-types">Suporte: XLSX, XLS, CSV</span>
+          <span class="file-types">XLSX &middot; XLS &middot; CSV</span>
           <input type="file" name="file" accept=".xlsx,.xls,.csv" required id="fileInput">
         </label>
         <div class="file-name" id="fileName">Nenhum arquivo selecionado</div>
@@ -77,69 +60,95 @@
   </section>
   {% endif %}
 
-  <!-- ─── TELA PRINCIPAL (só renderizada quando há colunas) ─── -->
+  <!-- ─── TELA PRINCIPAL ─── -->
   {% if colunas %}
-  <main class="main-container" id="mainApp" data-colunas='{{ colunas | tojson }}'
-    data-colunas-escolhidas='{{ colunas_escolhidas | tojson }}' data-total='{{ total_linhas }}'>
-    <aside class="sidebar">
-      <a href="/" style="text-decoration: none;">
-        <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 1.5rem;">
-          <i class="fas fa-arrow-left"></i> Trocar Arquivo
+  <main class="main-container" id="mainApp"
+    data-colunas='{{ colunas | tojson }}'
+    data-colunas-escolhidas='{{ colunas_escolhidas | tojson }}'
+    data-total='{{ total_linhas }}'>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/" style="text-decoration: none; flex: 1;">
+          <button type="button" class="btn btn-secondary" style="width: 100%;">
+            <i class="fas fa-arrow-left"></i> Trocar Arquivo
+          </button>
+        </a>
+        <button type="button" class="btn-icon" id="btnCollapseSidebar"
+          aria-label="Ocultar filtros" title="Ocultar filtros">
+          <i class="fas fa-chevron-left"></i>
         </button>
-      </a>
-      <h2>Filtros</h2>
+      </div>
+
       <form id="filterForm">
-        <input type="text" name="busca" placeholder="Pesquisar em todas as colunas..." list="sugestoes">
-        <div id="search-feedback"
-          style="display:none; font-size:0.78rem; margin-top:0.35rem; padding:0.3rem 0.6rem; border-radius:6px;"></div>
-        <datalist id="sugestoes">
-          {% for valor in sugestoes %}
-          <option value="{{ valor }}">
+
+        <div class="sidebar-section">
+          <span class="sidebar-section-label">Pesquisa</span>
+          <input type="text" name="busca" placeholder="Buscar em todas as colunas..." list="sugestoes">
+          <div id="search-feedback" class="search-feedback"></div>
+          <datalist id="sugestoes">
+            {% for valor in sugestoes %}
+            <option value="{{ valor }}">
             {% endfor %}
-        </datalist>
-        <br>
-        {% for col in colunas %}
-        <label>
-          <input type="checkbox" name="colunas" value="{{ col }}" {% if colunas_escolhidas and col in colunas_escolhidas
-            %}checked{% endif %}>
-          {{ col }}
-        </label>
-        {% endfor %}
-        <br>
-        <label>
-          <input type="checkbox" name="remover_caracteres" value="1" id="checkRemoverCaracteres"> Limpar pontuação ( ) -
-          e espaços
-        </label>
-        <select name="coluna_limpar" id="selectColunaLimpar" disabled
-          style="opacity:0.45;cursor:not-allowed;margin-top:0.4rem;">
-          <option value="">Escolha a coluna...</option>
-          <option value="TODAS">Todas (CUIDADO com espaços)</option>
-          {% for col in colunas %}
-          <option value="{{ col }}">{{ col }}</option>
-          {% endfor %}
-        </select>
-        <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #e2e8f0;">
-        <label>
-          <input type="checkbox" name="remover_duplicados" value="1" id="checkRemoverDuplicados"> Remover linhas
-          duplicadas
-        </label>
+          </datalist>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="col-list-header">
+            <span class="col-list-count" id="colCount">{{ colunas | length }} colunas</span>
+            <button type="button" class="col-list-toggle" id="btnToggleAll">Desmarcar todas</button>
+          </div>
+          <input type="text" id="colSearch" placeholder="&#xf002; Filtrar colunas..." class="col-search-input"
+            style="font-family: 'Font Awesome 6 Free', 'Outfit', sans-serif;">
+          <div class="col-checkbox-list" id="colCheckboxList">
+            {% for col in colunas %}
+            <label class="col-checkbox-item">
+              <input type="checkbox" name="colunas" value="{{ col }}"
+                {% if colunas_escolhidas and col in colunas_escolhidas %}checked{% endif %}>
+              <span>{{ col }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <hr>
+          <span class="sidebar-section-label">Limpeza</span>
+          <label>
+            <input type="checkbox" name="remover_caracteres" value="1" id="checkRemoverCaracteres">
+            Limpar pontuação e espaços
+          </label>
+          <select name="coluna_limpar" id="selectColunaLimpar" disabled>
+            <option value="">Escolha a coluna...</option>
+            <option value="TODAS">Todas as colunas</option>
+            {% for col in colunas %}
+            <option value="{{ col }}">{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="sidebar-section">
+          <span class="sidebar-section-label">Deduplicação</span>
+          <label>
+            <input type="checkbox" name="remover_duplicados" value="1" id="checkRemoverDuplicados">
+            Remover linhas duplicadas
+          </label>
+        </div>
+
       </form>
     </aside>
 
     <section class="content">
-      <h2>Prévia dos Dados
-        <span id="badge-total"
-          style="font-size:0.75rem; background:rgba(59,130,246,0.2); color:#93c5fd; padding:0.2rem 0.7rem; border-radius:999px; margin-left:0.5rem; font-weight:500; vertical-align:middle;">
-          {{ total_linhas }} linhas
-        </span>
-        <span id="badge-loading"
-          style="display:none; font-size:0.72rem; color:#94a3b8; margin-left:0.4rem; vertical-align:middle;">
-          <i class="fas fa-circle-notch fa-spin" style="font-size:0.8rem;"></i>
-        </span>
-      </h2>
+      <div class="content-header">
+        <h2>Prévia dos Dados
+          <span id="badge-total" class="badge-count">{{ total_linhas }} linhas</span>
+          <span id="badge-loading" class="badge-loading">
+            <i class="fas fa-circle-notch fa-spin"></i>
+          </span>
+        </h2>
+      </div>
 
       <div class="table-container">
-        <!-- Tabela vazia — DataTables server-side preenche via AJAX -->
         <table id="previewTable" class="display" style="width:100%">
           <thead>
             <tr>
@@ -149,40 +158,40 @@
               {% endfor %}
             </tr>
           </thead>
-          <tbody>
-            <!-- Linhas carregadas dinamicamente pelo DataTables -->
-          </tbody>
+          <tbody></tbody>
         </table>
       </div>
 
-      <br>
-      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-        <form id="downloadForm" action="/baixar" method="POST">
+      <div class="action-bar">
+        <form id="downloadForm" action="/baixar" method="POST" class="action-bar-group">
           <input type="hidden" name="col_order" id="colOrderInput">
-          <button type="submit" class="btn"><i class="fas fa-download"></i> Baixar Excel Filtrado</button>
+          <button type="submit" class="btn"><i class="fas fa-download"></i> Baixar Excel</button>
         </form>
-        <form id="splitForm" action="/dividir_baixar" method="POST"
-          style="display: flex; gap: 0.5rem; align-items: center;">
+        <div class="action-bar-divider"></div>
+        <form id="splitForm" action="/dividir_baixar" method="POST" class="action-bar-group">
           <input type="hidden" name="col_order" id="colOrderInputSplit">
-          <label for="num_parts" style="margin-bottom: 0;">Dividir em:</label>
-          <input type="number" name="num_parts" id="num_parts" min="2" max="100" value="3" required
-            style="width: 60px; padding: 0.5rem; border-radius: 6px; border: 1px solid #ccc; font-family: inherit;">
-          <span style="margin-right: 0.5rem;">partes</span>
-          <button type="submit" class="btn" style="background-color: #10b981;"><i class="fas fa-file-archive"></i>
-            Baixar ZIP com CSVs</button>
+          <span class="action-bar-label">Dividir em</span>
+          <input type="number" name="num_parts" id="num_parts" min="2" max="100" value="3"
+            required class="num-parts-input">
+          <span class="action-bar-label">partes</span>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-file-archive"></i> Baixar ZIP
+          </button>
         </form>
       </div>
     </section>
+
+    <button class="sidebar-open-btn" id="btnOpenSidebar"
+      aria-label="Mostrar filtros" title="Mostrar filtros">
+      <i class="fas fa-sliders-h"></i>
+    </button>
   </main>
   {% endif %}
 
-  <!-- jQuery e DataTables c/ Extensões -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
   <script src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
-
-  <!-- Nosso arquivo Main -->
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 

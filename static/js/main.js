@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const progressPct = document.getElementById('upload-progress-pct');
 
             // Exibe loading com barra de progresso
-            if (loadingOverlay) loadingOverlay.style.display = 'flex';
-            if (progressWrap) progressWrap.style.display = 'block';
+            if (loadingOverlay) loadingOverlay.classList.add('active');
+            if (progressWrap) progressWrap.classList.add('active');
             if (loadingMsg) loadingMsg.textContent = 'Enviando arquivo...';
 
             const xhr = new XMLHttpRequest();
@@ -45,13 +45,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (progressPct) progressPct.textContent = pct + '%';
                     if (pct === 100 && loadingMsg) {
                         loadingMsg.textContent = 'Processando dados, aguarde...';
-                        if (progressWrap) progressWrap.style.display = 'none';
+                        if (progressWrap) progressWrap.classList.remove('active');
                     }
                 }
             });
 
             xhr.addEventListener('load', function () {
-                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                if (loadingOverlay) loadingOverlay.classList.remove('active');
 
                 try {
                     const resp = JSON.parse(xhr.responseText);
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             xhr.addEventListener('error', function () {
-                if (loadingOverlay) loadingOverlay.style.display = 'none';
+                if (loadingOverlay) loadingOverlay.classList.remove('active');
                 alert('Erro de conexão ao enviar o arquivo.');
             });
 
@@ -88,62 +88,92 @@ document.addEventListener('DOMContentLoaded', function () {
         const thIndex = `<th style="display:none">_Index_</th>`;
         const thCols = colunas.map(c => `<th data-col-name="${escHtml(c)}">${escHtml(c)}</th>`).join('');
 
-        const checkboxes = colunas.map(c =>
-            `<label><input type="checkbox" name="colunas" value="${escHtml(c)}" checked> ${escHtml(c)}</label>`
-        ).join('');
+        const colListHeader = `
+          <div class="col-list-header">
+            <span class="col-list-count" id="colCount">${colunas.length} colunas</span>
+            <button type="button" class="col-list-toggle" id="btnToggleAll">Desmarcar todas</button>
+          </div>
+          <input type="text" id="colSearch" placeholder="Filtrar colunas..." class="col-search-input">
+          <div class="col-checkbox-list" id="colCheckboxList">
+            ${colunas.map(c => `
+              <label class="col-checkbox-item">
+                <input type="checkbox" name="colunas" value="${escHtml(c)}" checked>
+                <span>${escHtml(c)}</span>
+              </label>`).join('')}
+          </div>`;
 
         const selectOptions = colunas.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
 
         const mainHtml = `
         <main class="main-container" id="mainApp">
-          <aside class="sidebar">
-            <button type="button" class="btn btn-secondary" id="btnTrocarArquivo" style="width:100%;margin-bottom:1.5rem;">
-              <i class="fas fa-arrow-left"></i> Trocar Arquivo
-            </button>
-            <h2>Filtros</h2>
+          <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+              <button type="button" class="btn btn-secondary" id="btnTrocarArquivo" style="width:100%;">
+                <i class="fas fa-arrow-left"></i> Trocar Arquivo
+              </button>
+              <button type="button" class="btn-icon" id="btnCollapseSidebar"
+                aria-label="Ocultar filtros" title="Ocultar filtros">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+            </div>
             <form id="filterForm">
-              <input type="text" name="busca" placeholder="Pesquisar em todas as colunas..." list="sugestoes">
-              <div id="search-feedback" style="display:none; font-size:0.78rem; margin-top:0.35rem; padding:0.3rem 0.6rem; border-radius:6px;"></div>
-              <datalist id="sugestoes"></datalist>
-              <br>
-              ${checkboxes}
-              <br>
-              <label><input type="checkbox" name="remover_caracteres" value="1" id="checkRemoverCaracteres"> Limpar pontuação ( ) - e espaços</label>
-              <select name="coluna_limpar" id="selectColunaLimpar" disabled style="opacity:0.45;cursor:not-allowed;margin-top:0.4rem;">
-                <option value="">Escolha a coluna...</option>
-                <option value="TODAS">Todas (CUIDADO com espaços)</option>
-                ${selectOptions}
-              </select>
-              <hr style="margin:1rem 0;border:0;border-top:1px solid #e2e8f0;">
-              <label class="dedup-toggle"><input type="checkbox" name="remover_duplicados" value="1" id="checkRemoverDuplicados"> Remover linhas duplicadas</label>
+              <div class="sidebar-section">
+                <span class="sidebar-section-label">Pesquisa</span>
+                <input type="text" name="busca" placeholder="Buscar em todas as colunas..." list="sugestoes">
+                <div id="search-feedback" class="search-feedback"></div>
+                <datalist id="sugestoes"></datalist>
+              </div>
+              <div class="sidebar-section">
+                ${colListHeader}
+              </div>
+              <div class="sidebar-section">
+                <hr>
+                <span class="sidebar-section-label">Limpeza</span>
+                <label><input type="checkbox" name="remover_caracteres" value="1" id="checkRemoverCaracteres"> Limpar pontuação e espaços</label>
+                <select name="coluna_limpar" id="selectColunaLimpar" disabled>
+                  <option value="">Escolha a coluna...</option>
+                  <option value="TODAS">Todas as colunas</option>
+                  ${selectOptions}
+                </select>
+              </div>
+              <div class="sidebar-section">
+                <span class="sidebar-section-label">Deduplicação</span>
+                <label><input type="checkbox" name="remover_duplicados" value="1" id="checkRemoverDuplicados"> Remover linhas duplicadas</label>
+              </div>
             </form>
           </aside>
           <section class="content">
-            <h2>Prévia dos Dados
-              <span id="badge-total" style="font-size:0.75rem;background:rgba(59,130,246,0.2);color:#93c5fd;padding:0.2rem 0.7rem;border-radius:999px;margin-left:0.5rem;font-weight:500;vertical-align:middle;">${totalLinhas} linhas</span>
-              <span id="badge-loading" style="display:none;font-size:0.72rem;color:#94a3b8;margin-left:0.4rem;vertical-align:middle;"><i class="fas fa-circle-notch fa-spin" style="font-size:0.8rem;"></i></span>
-            </h2>
+            <div class="content-header">
+              <h2>Prévia dos Dados
+                <span id="badge-total" class="badge-count">${totalLinhas} linhas</span>
+                <span id="badge-loading" class="badge-loading"><i class="fas fa-circle-notch fa-spin"></i></span>
+              </h2>
+            </div>
             <div class="table-container">
               <table id="previewTable" class="display" style="width:100%">
                 <thead><tr>${thIndex}${thCols}</tr></thead>
                 <tbody></tbody>
               </table>
             </div>
-            <br>
-            <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-              <form id="downloadForm" action="/baixar" method="POST">
+            <div class="action-bar">
+              <form id="downloadForm" action="/baixar" method="POST" class="action-bar-group">
                 <input type="hidden" name="col_order" id="colOrderInput">
-                <button type="submit" class="btn"><i class="fas fa-download"></i> Baixar Excel Filtrado</button>
+                <button type="submit" class="btn"><i class="fas fa-download"></i> Baixar Excel</button>
               </form>
-              <form id="splitForm" action="/dividir_baixar" method="POST" style="display:flex;gap:0.5rem;align-items:center;">
+              <div class="action-bar-divider"></div>
+              <form id="splitForm" action="/dividir_baixar" method="POST" class="action-bar-group">
                 <input type="hidden" name="col_order" id="colOrderInputSplit">
-                <label for="num_parts" style="margin-bottom:0;">Dividir em:</label>
-                <input type="number" name="num_parts" id="num_parts" min="2" max="100" value="3" required style="width:60px;padding:0.5rem;border-radius:6px;border:1px solid #ccc;font-family:inherit;">
-                <span style="margin-right:0.5rem;">partes</span>
-                <button type="submit" class="btn" style="background-color:#10b981;"><i class="fas fa-file-archive"></i> Baixar ZIP com CSVs</button>
+                <span class="action-bar-label">Dividir em</span>
+                <input type="number" name="num_parts" id="num_parts" min="2" max="100" value="3" required class="num-parts-input">
+                <span class="action-bar-label">partes</span>
+                <button type="submit" class="btn btn-success"><i class="fas fa-file-archive"></i> Baixar ZIP</button>
               </form>
             </div>
           </section>
+          <button class="sidebar-open-btn" id="btnOpenSidebar"
+            aria-label="Mostrar filtros" title="Mostrar filtros">
+            <i class="fas fa-sliders-h"></i>
+          </button>
         </main>`;
 
         // Injeta no body (após o header)
@@ -165,6 +195,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let dataTableInstance = null;
     let currentColunasEscolhidas = null;
     let userColumnOrder = []; // persiste a ordem definida pelo usuário via ColReorder
+    let userPageLength = 50;  // persiste o pageLength escolhido pelo usuário
 
     function initMainLogic(colunasParam) {
         // Suporte à tela carregada via Jinja (GET com colunas) OU via buildMainApp
@@ -176,8 +207,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         initDataTable(currentColunasEscolhidas);
         bindFilterForm(colunasAll);
+        initColSearch();
         bindDownloadForms();
         bindTrocarArquivo();
+        bindSidebarToggle();
     }
 
     // ─── DataTable com Server-Side Processing ───
@@ -194,6 +227,9 @@ document.addEventListener('DOMContentLoaded', function () {
             userColumnOrder = Array.from(ths)
                 .map(th => th.dataset.colName || th.textContent.trim())
                 .filter(name => name && name !== '_Index_');
+
+            // Preserva o pageLength escolhido pelo usuário
+            userPageLength = $(existingTable).DataTable().page.len();
 
             $(existingTable).off('dblclick', 'tbody td');
             $(existingTable).DataTable().destroy(true);
@@ -239,8 +275,8 @@ document.addEventListener('DOMContentLoaded', function () {
             language: {
                 url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
             },
-            pageLength: 50,
-            lengthMenu: [25, 50, 100, 250, 500],
+            pageLength: userPageLength,
+            lengthMenu: [[25, 50, 100, 250, 500, 1000, -1], [25, 50, 100, 250, 500, 1000, "Tudo"]],
             ordering: true,
             info: true,
             lengthChange: true,
@@ -254,10 +290,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 const badge = document.getElementById('badge-total');
                 if (badge) badge.textContent = info.recordsDisplay + ' linhas';
 
-                // ── Proteção do select de page length ──
-                guardLengthSelect();
+                // ── Atualiza indicadores de scroll ──
+                updateScrollIndicators();
             }
         });
+
+        // Roda uma única vez após a inicialização (não a cada draw)
+        setTimeout(() => {
+            initTableScroll();
+        }, 150);
 
         // Double-click para edição inline
         $(previewTable).on('dblclick', 'tbody td', function () {
@@ -277,15 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
             let headerEl = $(dataTableInstance.column(colIdx).header());
             let headerName = headerEl.data('col-name') || headerEl.text();
 
-            let input = $('<input type="text">').val(originalValue).css({
-                'width': '100%',
-                'padding': '0.4rem',
-                'border': '1px solid var(--color-primary)',
-                'background': 'rgba(0,0,0,0.5)',
-                'color': '#fff',
-                'border-radius': '4px',
-                'outline': 'none'
-            });
+            let input = $('<input type="text">').val(originalValue).addClass('edit-cell-input');
 
             $td.html(input);
             input.focus();
@@ -323,58 +356,84 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // ─── Proteção do select de page length contra manipulação via DevTools ───
-    const ALLOWED_LENGTHS = new Set([25, 50, 100, 250, 500]);
-    let _lengthSelectObserver = null;
 
-    function guardLengthSelect() {
-        const sel = document.getElementById('previewTable_length')
-            ?.querySelector('select');
-        if (!sel) return;
+    // ─── Scroll horizontal refinado da tabela ───
+    function initTableScroll() {
+        const scrollBody = document.querySelector('.dataTables_scrollBody');
+        const scrollHead = document.querySelector('.dataTables_scrollHead');
+        if (!scrollBody) return;
 
-        // Reverte qualquer option cujo value não esteja na lista permitida
-        function sanitizeOptions() {
-            let changed = false;
-            sel.querySelectorAll('option').forEach(opt => {
-                const v = parseInt(opt.value, 10);
-                if (!ALLOWED_LENGTHS.has(v)) {
-                    // Restaura para o valor original mais próximo permitido
-                    const closest = [...ALLOWED_LENGTHS].reduce((a, b) =>
-                        Math.abs(b - v) < Math.abs(a - v) ? b : a
-                    );
-                    opt.value = String(closest);
-                    opt.textContent = String(closest);
-                    changed = true;
-                }
-            });
-            // Se o valor selecionado foi alterado, força retorno para 50
-            if (!ALLOWED_LENGTHS.has(parseInt(sel.value, 10))) {
-                sel.value = '50';
-                if (dataTableInstance) dataTableInstance.page.len(50).draw();
-            }
+        // Garante que o wrapper existe e está aplicado ao contêiner certo
+        const dtScroll = scrollBody.closest('.dataTables_scroll');
+        if (!dtScroll) return;
+
+        // Remove versão anterior do wrapper se já existir
+        const oldWrapper = dtScroll.parentNode.querySelector('.table-scroll-wrapper');
+        if (oldWrapper && oldWrapper.contains(dtScroll)) {
+            // Já envolvido — apenas atualiza os indicadores
+            updateScrollIndicators();
+            return;
         }
 
-        sanitizeOptions();
+        // Envolve o bloco DataTables num wrapper relativo
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-scroll-wrapper';
+        dtScroll.parentNode.insertBefore(wrapper, dtScroll);
+        wrapper.appendChild(dtScroll);
 
-        // Intercepta change: bloqueia seleção de valor inválido
-        sel.addEventListener('change', function (e) {
-            const v = parseInt(this.value, 10);
-            if (!ALLOWED_LENGTHS.has(v)) {
-                e.stopImmediatePropagation();
-                this.value = '50';
-                if (dataTableInstance) dataTableInstance.page.len(50).draw();
-            }
-        }, true); // capture = true para interceptar antes do handler do DataTables
+        // Sombras laterais
+        const hintL = document.createElement('div');
+        hintL.className = 'table-scroll-hint hint-left';
+        const hintR = document.createElement('div');
+        hintR.className = 'table-scroll-hint hint-right';
 
-        // MutationObserver: detecta edição via DevTools em tempo real
-        if (_lengthSelectObserver) _lengthSelectObserver.disconnect();
-        _lengthSelectObserver = new MutationObserver(sanitizeOptions);
-        _lengthSelectObserver.observe(sel, {
-            subtree: true,
-            childList: true,
-            attributes: true,
-            attributeFilter: ['value']
+        // Setas de navegação
+        const arrowL = document.createElement('button');
+        arrowL.className = 'scroll-arrow scroll-arrow-left';
+        arrowL.type = 'button';
+        arrowL.title = 'Rolar para a esquerda';
+        arrowL.innerHTML = '<i class="fas fa-chevron-left"></i>';
+
+        const arrowR = document.createElement('button');
+        arrowR.className = 'scroll-arrow scroll-arrow-right';
+        arrowR.type = 'button';
+        arrowR.title = 'Rolar para a direita';
+        arrowR.innerHTML = '<i class="fas fa-chevron-right"></i>';
+
+        wrapper.appendChild(hintL);
+        wrapper.appendChild(hintR);
+        wrapper.appendChild(arrowL);
+        wrapper.appendChild(arrowR);
+
+        // Scroll com passo suave
+        const STEP = 240;
+        arrowL.addEventListener('click', () => scrollBody.scrollBy({ left: -STEP, behavior: 'smooth' }));
+        arrowR.addEventListener('click', () => scrollBody.scrollBy({ left:  STEP, behavior: 'smooth' }));
+
+        // Sincroniza cabeçalho com o corpo ao rolar
+        scrollBody.addEventListener('scroll', () => {
+            if (scrollHead) scrollHead.scrollLeft = scrollBody.scrollLeft;
+            updateScrollIndicators();
         });
+
+        // Estado inicial
+        updateScrollIndicators();
+    }
+
+    function updateScrollIndicators() {
+        const scrollBody = document.querySelector('.dataTables_scrollBody');
+        const wrapper    = document.querySelector('.table-scroll-wrapper');
+        if (!scrollBody || !wrapper) return;
+
+        const { scrollLeft, scrollWidth, clientWidth } = scrollBody;
+        const hasScroll    = scrollWidth > clientWidth + 2;
+        const canScrollL   = scrollLeft > 2;
+        const canScrollR   = scrollLeft < scrollWidth - clientWidth - 2;
+
+        wrapper.querySelector('.hint-left') ?.classList.toggle('visible', canScrollL);
+        wrapper.querySelector('.hint-right')?.classList.toggle('visible', canScrollR && hasScroll);
+        wrapper.querySelector('.scroll-arrow-left') ?.classList.toggle('visible', canScrollL);
+        wrapper.querySelector('.scroll-arrow-right')?.classList.toggle('visible', canScrollR && hasScroll);
     }
 
     // ─── Filtros (AJAX para /filtrar, depois recarrega DataTable) ───
@@ -387,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const fetchFilters = () => {
             // Indicador discreto: apenas o spinner no badge, sem overlay bloqueante
             const badgeLoading = document.getElementById('badge-loading');
-            if (badgeLoading) badgeLoading.style.display = 'inline';
+            if (badgeLoading) badgeLoading.classList.add('active');
 
             const formData = new FormData(filterForm);
 
@@ -414,21 +473,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         const busca = filterForm.querySelector('input[name="busca"]')?.value?.trim();
                         const fb = document.getElementById('search-feedback');
                         if (fb) {
+                            fb.className = 'search-feedback';
                             if (busca) {
                                 const total = resp.total_filtrado ?? 0;
                                 if (total === 0) {
-                                    fb.style.display = 'block';
-                                    fb.style.background = 'rgba(239,68,68,0.12)';
-                                    fb.style.color = '#fca5a5';
+                                    fb.classList.add('search-feedback--error');
                                     fb.textContent = `Nenhum resultado para "${busca}"`;
                                 } else {
-                                    fb.style.display = 'block';
-                                    fb.style.background = 'rgba(16,185,129,0.12)';
-                                    fb.style.color = '#6ee7b7';
+                                    fb.classList.add('search-feedback--success');
                                     fb.textContent = `${total} resultado${total !== 1 ? 's' : ''} para "${busca}"`;
                                 }
-                            } else {
-                                fb.style.display = 'none';
                             }
                         }
 
@@ -454,7 +508,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.error('Erro na filtragem', err);
                 })
                 .finally(() => {
-                    if (badgeLoading) badgeLoading.style.display = 'none';
+                    if (badgeLoading) badgeLoading.classList.remove('active');
                 });
         };
 
@@ -480,6 +534,82 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ─── Pesquisa rápida e toggle de colunas ───
+    function initColSearch() {
+        const colSearch = document.getElementById('colSearch');
+        const btnToggleAll = document.getElementById('btnToggleAll');
+        const colCheckboxList = document.getElementById('colCheckboxList');
+        if (!colCheckboxList) return;
+
+        // Filtro de pesquisa
+        if (colSearch) {
+            colSearch.addEventListener('input', () => {
+                const q = colSearch.value.trim().toLowerCase();
+                const items = colCheckboxList.querySelectorAll('.col-checkbox-item');
+                let visibleCount = 0;
+                items.forEach(item => {
+                    const label = item.querySelector('span')?.textContent.toLowerCase() || '';
+                    const match = label.includes(q);
+                    item.classList.toggle('hidden', !match);
+                    if (match) visibleCount++;
+                });
+                const countEl = document.getElementById('colCount');
+                if (countEl) countEl.textContent = q
+                    ? `${visibleCount} encontrada${visibleCount !== 1 ? 's' : ''}`
+                    : `${items.length} colunas`;
+            });
+        }
+
+        // Toggle marcar/desmarcar todas
+        if (btnToggleAll) {
+            const updateToggleLabel = () => {
+                const checkboxes = colCheckboxList.querySelectorAll('input[type="checkbox"]');
+                const allChecked = Array.from(checkboxes).every(c => c.checked);
+                btnToggleAll.textContent = allChecked ? 'Desmarcar todas' : 'Marcar todas';
+            };
+
+            btnToggleAll.addEventListener('click', () => {
+                const checkboxes = colCheckboxList.querySelectorAll('input[type="checkbox"]');
+                const allChecked = Array.from(checkboxes).every(c => c.checked);
+                checkboxes.forEach(c => { c.checked = !allChecked; });
+                updateToggleLabel();
+                // Dispara o filtro automaticamente
+                const filterForm = document.getElementById('filterForm');
+                if (filterForm) filterForm.dispatchEvent(new Event('submit'));
+            });
+
+            // Atualiza o label ao marcar/desmarcar individualmente
+            colCheckboxList.addEventListener('change', updateToggleLabel);
+            updateToggleLabel();
+        }
+    }
+
+    // ─── Sidebar colapsável ───
+    function bindSidebarToggle() {
+        const sidebar = document.getElementById('sidebar');
+        const btnCollapse = document.getElementById('btnCollapseSidebar');
+        const btnOpen = document.getElementById('btnOpenSidebar');
+        if (!sidebar || !btnCollapse || !btnOpen) return;
+
+        const KEY = 'pvd_sidebar_collapsed';
+
+        function collapse() {
+            sidebar.classList.add('collapsed');
+            btnOpen.style.display = 'flex';
+            localStorage.setItem(KEY, '1');
+        }
+        function expand() {
+            sidebar.classList.remove('collapsed');
+            btnOpen.style.display = 'none';
+            localStorage.setItem(KEY, '0');
+        }
+
+        btnCollapse.addEventListener('click', collapse);
+        btnOpen.addEventListener('click', expand);
+
+        if (localStorage.getItem(KEY) === '1') collapse();
+    }
+
     // ─── Ativa/desativa o select de coluna de limpeza ───
     function bindCleanToggle(form) {
         const chk = (form || document).querySelector('#checkRemoverCaracteres');
@@ -488,8 +618,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const updateState = () => {
             sel.disabled = !chk.checked;
-            sel.style.opacity = chk.checked ? '1' : '0.45';
-            sel.style.cursor = chk.checked ? 'pointer' : 'not-allowed';
         };
 
         chk.addEventListener('change', updateState);
@@ -498,36 +626,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ─── Toast de duplicados removidos ───
     function showDedupToast(count) {
-        // Remove toast anterior se existir
         const old = document.getElementById('dedup-toast');
         if (old) old.remove();
 
         const toast = document.createElement('div');
         toast.id = 'dedup-toast';
-        toast.innerHTML = `<i class="fas fa-filter" style="margin-right:0.5rem;"></i>${count} linha${count !== 1 ? 's duplicadas removidas' : ' duplicada removida'}`;
-        toast.style.cssText = [
-            'position:fixed', 'bottom:1.5rem', 'right:1.5rem', 'z-index:99999',
-            'background:linear-gradient(135deg,#7c3aed,#3b82f6)',
-            'color:#fff', 'padding:0.75rem 1.25rem', 'border-radius:12px',
-            'font-size:0.88rem', 'font-weight:500', 'box-shadow:0 8px 24px rgba(0,0,0,0.35)',
-            'display:flex', 'align-items:center',
-            'opacity:0', 'transform:translateY(12px)',
-            'transition:opacity 0.3s ease, transform 0.3s ease'
-        ].join(';');
+        toast.className = 'dedup-toast';
+        toast.innerHTML = `<i class="fas fa-filter"></i>${count} linha${count !== 1 ? 's duplicadas removidas' : ' duplicada removida'}`;
         document.body.appendChild(toast);
 
-        // Anima entrada
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateY(0)';
-            });
+            requestAnimationFrame(() => { toast.classList.add('visible'); });
         });
 
-        // Remove após 4s
         setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateY(12px)';
+            toast.classList.remove('visible');
             setTimeout(() => toast.remove(), 350);
         }, 4000);
     }
